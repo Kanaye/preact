@@ -583,6 +583,51 @@ describe('render()', () => {
 		expect(sortAttributes(html)).to.equal(sortAttributes('<input type="range" min="0" max="100" list="steplist">'));
 	});
 
+	// #857
+	it('should replace "placeholder" nodes correctly', (done) => {
+		let count = 0;
+		let Child = class extends Component {
+			constructor(props) {
+				super(props);
+				count++;
+			}
+			render() {
+				return (<div>something</div>);
+			}
+		};
+		let Parent = class extends Component {
+			constructor() {
+				super();
+				this.state = { child: true, count: 0 };
+				const update = () => {
+					if (this.state.count == 5) {
+						expect(count).to.equal(1);
+						return done();
+					}
+					setTimeout(this.rerender.bind(this, update), 5);
+				};
+				update();
+			}
+
+			rerender(fn) {
+				this.setState({ child: !this.state.child, count: this.state.count + 1  }, fn);
+			}
+
+			render() {
+				return (
+					<div>
+						{ this.state.child && <div />}
+						<div>
+							<Child />
+						</div>
+					</div>
+				);
+			}
+		};
+
+		render(<Parent />, scratch);
+	});
+
 	it('should not execute append operation when child is at last', (done) => {
 		let input;
 		class TodoList extends Component {
