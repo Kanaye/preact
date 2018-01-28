@@ -10,6 +10,7 @@ import { extend } from '../util';
  * @private
  */
 export function isSameNodeType(node, vnode, hydrating) {
+	if (vnode === '' || node.nodeType === 8) return true;
 	if (typeof vnode==='string' || typeof vnode==='number') {
 		return node.splitText!==undefined;
 	}

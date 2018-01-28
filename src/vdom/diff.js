@@ -59,14 +59,20 @@ export function diff(dom, vnode, context, mountAll, parent, componentRoot) {
 	return ret;
 }
 
-
 /** Internals of `diff()`, separated to allow bypassing diffLevel / mount flushing. */
 function idiff(dom, vnode, context, mountAll, componentRoot) {
 	let out = dom,
 		prevSvgMode = isSvgMode;
 
-	// empty values (null, undefined, booleans) render as empty Text nodes
-	if (vnode==null || typeof vnode==='boolean') vnode = '';
+	// empty values (empty strings, null, undefined, booleans) render as empty comment nodes
+	if (vnode==='' || vnode==null || typeof vnode==='boolean') {
+		if (out==null || out.nodeType!==8) {
+			out = document.createComment('');
+			replaceNode(dom, out);
+		}
+
+		return out;
+	}
 
 
 	// Fast case: Strings & Numbers create/update Text nodes.
@@ -82,10 +88,7 @@ function idiff(dom, vnode, context, mountAll, componentRoot) {
 		else {
 			// it wasn't a Text node: replace it with one and recycle the old Element
 			out = document.createTextNode(vnode);
-			if (dom) {
-				if (dom.parentNode) dom.parentNode.replaceChild(out, dom);
-				recollectNodeTree(dom, true);
-			}
+			replaceNode(dom, out);
 		}
 
 		out[ATTR_KEY] = true;
@@ -183,7 +186,7 @@ function innerDiffNode(dom, vchildren, context, mountAll, isHydrating) {
 				keyedLen++;
 				keyed[key] = child;
 			}
-			else if (props || (child.splitText!==undefined ? (isHydrating ? child.nodeValue.trim() : true) : isHydrating)) {
+			else if (props || (child.nodeType===8 ? (isHydrating ? child.nodeValue.trim() : true) : isHydrating)) {
 				children[childrenLen++] = child;
 			}
 		}
@@ -282,6 +285,18 @@ export function removeChildren(node) {
 		let next = node.previousSibling;
 		recollectNodeTree(node, true);
 		node = next;
+	}
+}
+/**
+ * replaces a dom node with an other dom node.
+ * Also recollectes the old node.
+ * @param  {Element} node        The node that should be replaced and recollected.
+ * @param  {Element} replacement The replacement node.
+ */
+function replaceNode(node, replacement) {
+	if (node) {
+		if (node.parentNode) node.parentNode.replaceChild(replacement, node);
+		recollectNodeTree(node, true);
 	}
 }
 
