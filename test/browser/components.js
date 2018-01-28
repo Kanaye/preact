@@ -244,7 +244,7 @@ describe('Components', () => {
 		Comp.prototype.componentWillMount.reset();
 		bad.setState({alt: true});
 		bad.forceUpdate();
-		expect(scratch.textContent, 'new component without key re-rendered').to.equal('D');
+		expect(scratch.textContent, 'new component without key re-rendered').to.equal('E');
 		expect(Comp.prototype.componentWillMount).to.not.have.been.called;
 		expect(sideEffect).to.not.have.been.called;
 
