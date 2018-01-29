@@ -186,7 +186,8 @@ function innerDiffNode(dom, vchildren, context, mountAll, isHydrating) {
 				keyedLen++;
 				keyed[key] = child;
 			}
-			else if (props || (child.nodeType===8 ? (isHydrating ? child.nodeValue.trim() : true) : isHydrating)) {
+			// consume comments and textnodes and nodes with props or all nodes if we are hydrating
+			else if (isHydrating || props!==undefined || child.appendData!==undefined) {
 				children[childrenLen++] = child;
 			}
 		}
