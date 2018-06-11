@@ -1,6 +1,6 @@
 import { IS_NON_DIMENSIONAL } from '../constants';
 import options from '../options';
-
+import { getAll, set } from '../element-data';
 /**
  * A DOM event listener
  * @typedef {(e: Event) => void} EventListner
@@ -35,7 +35,7 @@ import options from '../options';
 export function createNode(nodeName, isSvg) {
 	/** @type {PreactElement} */
 	let node = isSvg ? document.createElementNS('http://www.w3.org/2000/svg', nodeName) : document.createElement(nodeName);
-	node.normalizedNodeName = nodeName;
+	set(node, { normalizedNodeName: nodeName });
 	return node;
 }
 
@@ -101,7 +101,8 @@ export function setAccessor(node, name, old, value, isSvg) {
 		else {
 			node.removeEventListener(name, eventProxy, useCapture);
 		}
-		(node._listeners || (node._listeners = {}))[name] = value;
+		let listeners = getAll(node)._listeners || set(node, { _listeners: {}})._listeners;
+		listeners[name] = value;
 	}
 	else if (name!=='list' && name!=='type' && !isSvg && name in node) {
 		// Attempt to set a DOM property to the given value.
@@ -134,5 +135,5 @@ export function setAccessor(node, name, old, value, isSvg) {
  * @private
  */
 function eventProxy(e) {
-	return this._listeners[e.type](options.event && options.event(e) || e);
+	return getAll(this)._listeners[e.type](options.event && options.event(e) || e);
 }

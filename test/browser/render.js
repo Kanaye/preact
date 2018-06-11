@@ -1,5 +1,5 @@
 /* global DISABLE_FLAKEY */
-
+import { getComponent } from '../../src/element-data';
 import { h, render, Component } from '../../src/preact';
 /** @jsx h */
 
@@ -618,10 +618,11 @@ describe('render()', () => {
 		const root = render(<TodoList />, scratch);
 		input.focus();
 		input.value = 1;
-		root._component.setText({
+		let component = getComponent(root);
+		component.setText({
 			target: input
 		});
-		root._component.addTodo();
+		component.addTodo();
 		expect(document.activeElement).to.equal(input);
 		setTimeout(() =>{
 			expect(/1/.test(scratch.innerHTML)).to.equal(true);

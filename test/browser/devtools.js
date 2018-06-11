@@ -32,8 +32,8 @@ class MultiChild extends Component {
 		return h('div', {}, Array(this.state.count).fill('child'));
 	}
 }
-
-let describe_ = describe;
+// Skip tests in this eexperimental branch
+let describe_ = describe.skip;
 if (!('name' in Function.prototype)) {
 	// Skip these tests under Internet Explorer
 	describe_ = describe.skip;

@@ -1,10 +1,10 @@
-import { ATTR_KEY } from '../constants';
 import { isSameNodeType, isNamedNode } from './index';
 import { buildComponentFromVNode } from './component';
 import { createNode, setAccessor } from '../dom/index';
 import { unmountComponent } from './component';
 import options from '../options';
 import { removeNode } from '../dom/index';
+import { getComponent, getAttr, setAttr } from '../element-data';
 
 /**
  * Queue of components that have been mounted and are awaiting componentDidMount
@@ -50,7 +50,7 @@ export function diff(dom, vnode, context, mountAll, parent, componentRoot) {
 		isSvgMode = parent!=null && parent.ownerSVGElement!==undefined;
 
 		// hydration is indicated by the existing element to be diffed not having a prop cache
-		hydrating = dom!=null && !(ATTR_KEY in dom);
+		hydrating = dom!=null && !getAttr(dom);
 	}
 
 	let ret = idiff(dom, vnode, context, mountAll, componentRoot);
@@ -90,7 +90,7 @@ function idiff(dom, vnode, context, mountAll, componentRoot) {
 	if (typeof vnode==='string' || typeof vnode==='number') {
 
 		// update if it's already a Text node:
-		if (dom && dom.splitText!==undefined && dom.parentNode && (!dom._component || componentRoot)) {
+		if (dom && dom.splitText!==undefined && dom.parentNode && (!getComponent(dom)|| componentRoot)) {
 			/* istanbul ignore if */ /* Browser quirk that can't be covered: https://github.com/developit/preact/commit/fd4f21f5c45dfd75151bd27b4c217d8003aa5eb9 */
 			if (dom.nodeValue!=vnode) {
 				dom.nodeValue = vnode;
@@ -105,7 +105,7 @@ function idiff(dom, vnode, context, mountAll, componentRoot) {
 			}
 		}
 
-		out[ATTR_KEY] = true;
+		setAttr(out, true);
 
 		return out;
 	}
@@ -141,11 +141,11 @@ function idiff(dom, vnode, context, mountAll, componentRoot) {
 
 
 	let fc = out.firstChild,
-		props = out[ATTR_KEY],
+		props = getAttr(out),
 		vchildren = vnode.children;
 
 	if (props==null) {
-		props = out[ATTR_KEY] = {};
+		props = setAttr(out, {});
 		for (let a=out.attributes, i=a.length; i--; ) props[a[i].name] = a[i].value;
 	}
 
@@ -167,7 +167,6 @@ function idiff(dom, vnode, context, mountAll, componentRoot) {
 
 	// restore previous SVG mode: (in case we're exiting an SVG namespace)
 	isSvgMode = prevSvgMode;
-
 	return out;
 }
 
@@ -191,14 +190,14 @@ function innerDiffNode(dom, vchildren, context, mountAll, isHydrating) {
 		len = originalChildren.length,
 		childrenLen = 0,
 		vlen = vchildren ? vchildren.length : 0,
-		j, c, f, vchild, child;
+		j, c, f, vchild, child, cc;
 
 	// Build up a map of keyed children and an Array of unkeyed children:
 	if (len!==0) {
 		for (let i=0; i<len; i++) {
 			let child = originalChildren[i],
-				props = child[ATTR_KEY],
-				key = vlen && props ? child._component ? child._component.__key : props.key : null;
+				props = getAttr(child),
+				key = vlen && props ? (cc = getComponent(child))? cc.__key : props.key : null;
 			if (key!=null) {
 				keyedLen++;
 				keyed[key] = child;
@@ -276,17 +275,18 @@ function innerDiffNode(dom, vchildren, context, mountAll, isHydrating) {
  *  lifecycle, skips removal
  */
 export function recollectNodeTree(node, unmountOnly) {
-	let component = node._component;
+	let component = getComponent(node);
 	if (component) {
 		// if node is owned by a Component, unmount that component (ends up recursing back here)
 		unmountComponent(component);
 	}
 	else {
 		// If the node's VNode had a ref function, invoke it with null here.
-		// (this is part of the React spec, and smart for unsetting references)
-		if (node[ATTR_KEY]!=null && node[ATTR_KEY].ref) node[ATTR_KEY].ref(null);
+		// (this is part of the React spec, and smart for unsetting references
+		let props = getAttr(node);
+		if (props && props.ref) props.ref(null);
 
-		if (unmountOnly===false || node[ATTR_KEY]==null) {
+		if (unmountOnly===false || props==null) {
 			removeNode(node);
 		}
 

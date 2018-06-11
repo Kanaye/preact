@@ -1,5 +1,5 @@
 import { extend } from '../util';
-
+import { getAll } from '../element-data';
 
 /**
  * Check if two nodes are equivalent.
@@ -14,9 +14,9 @@ export function isSameNodeType(node, vnode, hydrating) {
 		return node.splitText!==undefined;
 	}
 	if (typeof vnode.nodeName==='string') {
-		return !node._componentConstructor && isNamedNode(node, vnode.nodeName);
+		return !getAll(node)._componentConstructor && isNamedNode(node, vnode.nodeName);
 	}
-	return hydrating || node._componentConstructor===vnode.nodeName;
+	return hydrating || getAll(node)._componentConstructor===vnode.nodeName;
 }
 
 
@@ -26,7 +26,7 @@ export function isSameNodeType(node, vnode, hydrating) {
  * @param {string} nodeName Unnormalized name to compare against.
  */
 export function isNamedNode(node, nodeName) {
-	return node.normalizedNodeName===nodeName || node.nodeName.toLowerCase()===nodeName.toLowerCase();
+	return getAll(node).normalizedNodeName===nodeName || node.nodeName.toLowerCase()===nodeName.toLowerCase();
 }
 
 

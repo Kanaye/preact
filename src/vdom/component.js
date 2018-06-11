@@ -1,4 +1,4 @@
-import { SYNC_RENDER, NO_RENDER, FORCE_RENDER, ASYNC_RENDER, ATTR_KEY } from '../constants';
+import { SYNC_RENDER, NO_RENDER, FORCE_RENDER, ASYNC_RENDER } from '../constants';
 import options from '../options';
 import { extend } from '../util';
 import { enqueueRender } from '../render-queue';
@@ -6,6 +6,7 @@ import { getNodeProps } from './index';
 import { diff, mounts, diffLevel, flushMounts, recollectNodeTree, removeChildren } from './diff';
 import { createComponent, collectComponent } from './component-recycler';
 import { removeNode } from '../dom/index';
+import { del, getAll, getComponent, getAttr, set } from '../element-data';
 
 /**
  * Set a component's `props` and possibly re-render the component
@@ -133,7 +134,6 @@ export function renderComponent(component, renderMode, mountAll, isChild) {
 			}
 			else {
 				toUnmount = inst;
-
 				component._component = inst = createComponent(childComponent, childProps, context);
 				inst.nextBase = inst.nextBase || nextBase;
 				inst._parentComponent = component;
@@ -153,7 +153,7 @@ export function renderComponent(component, renderMode, mountAll, isChild) {
 			}
 
 			if (initialBase || renderMode===SYNC_RENDER) {
-				if (cbase) cbase._component = null;
+				if (cbase) del(cbase);
 				base = diff(cbase, rendered, context, mountAll || !isUpdate, initialBase && initialBase.parentNode, true);
 			}
 		}
@@ -164,7 +164,7 @@ export function renderComponent(component, renderMode, mountAll, isChild) {
 				baseParent.replaceChild(base, initialBase);
 
 				if (!toUnmount) {
-					initialBase._component = null;
+					del(initialBase);
 					recollectNodeTree(initialBase, false);
 				}
 			}
@@ -181,8 +181,10 @@ export function renderComponent(component, renderMode, mountAll, isChild) {
 			while ((t=t._parentComponent)) {
 				(componentRef = t).base = base;
 			}
-			base._component = componentRef;
-			base._componentConstructor = componentRef.constructor;
+			set(base, {
+				_component: componentRef,
+				_componentConstructor: componentRef.constructor
+			});
 		}
 	}
 
@@ -218,10 +220,10 @@ export function renderComponent(component, renderMode, mountAll, isChild) {
  * @private
  */
 export function buildComponentFromVNode(dom, vnode, context, mountAll) {
-	let c = dom && dom._component,
+	let c = dom && getComponent(dom),
 		originalComponent = c,
 		oldDom = dom,
-		isDirectOwner = c && dom._componentConstructor===vnode.nodeName,
+		isDirectOwner = c && getAll(dom)._componentConstructor===vnode.nodeName,
 		isOwner = isDirectOwner,
 		props = getNodeProps(vnode);
 	while (c && !isOwner && (c=c._parentComponent)) {
@@ -248,7 +250,7 @@ export function buildComponentFromVNode(dom, vnode, context, mountAll) {
 		dom = c.base;
 
 		if (oldDom && dom!==oldDom) {
-			oldDom._component = null;
+			del(oldDom);
 			recollectNodeTree(oldDom, false);
 		}
 	}
@@ -280,7 +282,8 @@ export function unmountComponent(component) {
 		unmountComponent(inner);
 	}
 	else if (base) {
-		if (base[ATTR_KEY] && base[ATTR_KEY].ref) base[ATTR_KEY].ref(null);
+		let attr = getAttr(base);
+		if (attr && attr.ref) attr.ref(null);
 
 		component.nextBase = base;
 
